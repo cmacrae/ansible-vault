@@ -1,0 +1,79 @@
+---
+
+  - name: Ensure Vault service group exists
+    group:
+      name: "{{ vault_group_name }}"
+      gid: "{{ vault_group_gid }}"
+      system: true
+      state: present
+
+  - name: Ensure Vault service user exists
+    user:
+      name: "{{ vault_user_name }}"
+      uid: "{{ vault_user_uid }}"
+      group: "{{ vault_group_name }}"
+      home: "{{ vault_user_home }}"
+      system: true
+      state: present
+
+  - name: Ensure unzip is installed
+    package:
+      name: unzip
+      state: present
+
+  - name: Ensure Vault directory structure is configured
+    file:
+      path: "{{ item }}"
+      state: directory
+      owner: "{{ vault_user_name }}"
+      group: "{{ vault_group_name }}"
+    with_items:
+      - "{{ vault_config_dir }}"
+      - "{{ vault_user_home }}/bin"
+
+  - stat: path="{{ vault_user_home }}/bin/vault"
+    register: vault_bin
+
+  - name: Fetch Vault
+    unarchive:
+      src: "{{ vault_uri }}"
+      dest: "{{ vault_user_home }}/bin"
+      remote_src: true
+    become: true
+    become_user: "{{ vault_user_name }}"
+    when: not vault_bin.stat.exists
+
+  - name: Deploy Vault service configuration
+    template:
+      src: "{{ vault_config_src }}"
+      dest: "{{ vault_config_dir}}/main.json"
+      owner: "{{ vault_user_name }}"
+      group: "{{ vault_group_name }}"
+
+  - name: Deploy Vault service manifest
+    template:
+      src: "{{ vault_service_file.src }}"
+      dest: "{{ vault_service_file.dest }}"
+      owner: root
+      group: root
+      mode: 0600
+    register: vault_svc_manifest
+    notify:
+      - Restart Vault service
+
+  - name: Reload Vault service config
+    systemd:
+      name: vault
+      daemon_reload: true
+    when: vault_svc_manifest.changed
+
+  - name: Ensure the Vault service is running
+    service:
+      name: vault
+      state: started
+    when: not vault_packer_provision
+
+  - name: Ensure the Vault service is enabled on boot
+    service:
+      name: vault
+      enabled: yes

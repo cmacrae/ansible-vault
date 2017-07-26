@@ -1,0 +1,17 @@
+[Unit]
+Description=Vault secret management
+Requires=network-online.target
+After=network.target
+
+[Service]
+User={{ vault_user_name }}
+Group={{ vault_group_name }}
+Restart=on-failure
+Environment=GOMAXPROCS=2
+ExecStart={{ vault_user_home }}/bin/vault server -config={{ vault_config_dir }}/main.json
+ExecReload=/bin/kill -s HUP $MAINPID
+KillSignal=SIGINT
+TimeoutStopSec=5
+
+[Install]
+WantedBy=multi-user.target

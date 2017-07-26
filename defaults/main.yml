@@ -1,0 +1,26 @@
+---
+vault_packer_provision: false
+vault_group_name: vault
+vault_group_gid: 3000
+vault_user_name: vault
+vault_user_uid: 3000
+vault_user_home: /opt/vault
+vault_config_dir: "{{ vault_user_home }}/etc"
+vault_version: 0.7.3
+vault_uri: "https://releases.hashicorp.com/vault/{{ vault_version }}/vault_{{ vault_version }}_linux_amd64.zip"
+vault_config_src: main.json.j2
+vault_service_file:
+  src: vault.service.j2
+  dest: /etc/systemd/system/vault.service
+
+vault_config:
+  cluster_name: dc1
+  storage:
+    consul:
+      address: 127.0.0.1:8500
+      token: someToken
+      path: vault
+  listener:
+    tcp:
+      address: 127.0.0.1:8200
+      tls_disable: 1

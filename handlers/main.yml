@@ -1,0 +1,6 @@
+---
+- name: Restart Vault service
+  service:
+    name: vault
+    state: restarted
+  when: not vault_packer_provision
